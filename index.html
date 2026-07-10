@@ -1602,7 +1602,7 @@ function renderTrainerTracking(){
   const counterCols = PROGRAM_COUNTERS[trainer.programs[0]] || [];
   const t=document.getElementById('trainerTrackTable');
   t.innerHTML=`
-    <thead><tr><th>الطالب</th>${skills.map(s=>`<th>${s}</th>`).join('')}${counterCols.map(c=>`<th style="color:var(--navy)">${c.label}</th>`).join('')}<th>المتوسط</th><th>ملاحظة</th></tr></thead>
+    <thead><tr><th>الطالب</th>${skills.map(s=>`<th>${s}</th>`).join('')}${counterCols.map(c=>`<th>${c.label}</th>`).join('')}<th>المتوسط</th><th>ملاحظة</th></tr></thead>
     <tbody>${list.map(s=>{
       trainerScores[tid][s.id]=trainerScores[tid][s.id]||{};
       const wk=trainerScores[tid][s.id][week]||{};
@@ -1764,7 +1764,7 @@ function buildStudentEvalDetails(student){
     cards+=`<div class="card">
       <div class="card-title" style="color:${prog.color}">✍️ ${prog.label} <span style="color:var(--muted);font-weight:600;font-size:13.5px">— ${tr.name}</span></div>
       <div class="table-wrap"><table>
-        <thead><tr><th>الفترة</th>${skills.map(sk=>`<th>${sk}</th>`).join('')}${counters.map(c=>`<th style="color:var(--navy)">${c.label}</th>`).join('')}<th>المتوسط</th><th>ملاحظة المدرب</th></tr></thead>
+        <thead><tr><th>الفترة</th>${skills.map(sk=>`<th>${sk}</th>`).join('')}${counters.map(c=>`<th>${c.label}</th>`).join('')}<th>المتوسط</th><th>ملاحظة المدرب</th></tr></thead>
         <tbody>${rows}</tbody>${counters.length?`<tfoot><tr><td><b>الإجمالي</b></td>${skills.map(()=>'<td></td>').join('')}${counters.map(c=>{ const tot=weeks.reduce((a,w)=>a+((sdata[w].counts&&+sdata[w].counts[c.key])||0),0); return `<td style="text-align:center;font-weight:800;color:${prog.color}">${tot}</td>`; }).join('')}<td></td><td></td></tr></tfoot>`:''}
       </table></div>
     </div>`;
