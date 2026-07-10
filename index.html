@@ -560,6 +560,7 @@ tbody tr:last-child td{border-bottom:none}
             <div class="card-title">📄 التقارير الفردية</div>
             <div class="toolbar">
               <div class="grow"><select class="select" id="reportStudentSelect" style="width:100%" onchange="loadReport()"><option value="">— اختر طالباً —</option></select></div>
+              <button class="btn btn-ghost btn-sm" onclick="manualRefreshReports()">🔄 تحديث</button>
               <button class="btn btn-ghost btn-sm" onclick="printReport()">🖨️ طباعة</button>
               <button class="btn btn-nav btn-sm" onclick="exportReport()">⬇️ تصدير</button>
             </div>
@@ -744,7 +745,7 @@ let currentWeek = {asas:1, mutaqadem:1, trainer:1};
 let importRows = null;
 
 const LS = 'thraa_camp_v1';
-let dataReady=false, saving=false, saveTimer=null;
+let dataReady=false, saving=false, saveTimer=null, unsavedEdits=false;
 
 /* ---------- 5. التخزين (Supabase + كاش localStorage) ---------- */
 function cloud(){ return window.__sb || null; }
@@ -827,6 +828,38 @@ async function cloudSaveNow(){
 }
 // حذف صف من السحابة عند حذف طالب/مدرب
 async function cloudDelete(table,col,val){ const sb=cloud(); if(!sb) return; try{ const r=await sb.from(table).delete().eq(col,val); if(r.error) throw r.error; }catch(e){ console.warn('تعذّر الحذف السحابي',e); } }
+
+// إعادة تحميل البيانات من السحابة (لعرض أحدث الدرجات التي رصدها الآخرون)
+async function refreshFromCloud(){
+  const sb=cloud(); if(!sb) return false;
+  try{
+    const [st,tr,ad,ts]=await Promise.all([
+      sb.from('students').select('*').order('id'),
+      sb.from('trainers').select('*'),
+      sb.from('admins').select('*'),
+      sb.from('trainer_scores').select('*')
+    ]);
+    if(st.error||tr.error||ad.error||ts.error) throw (st.error||tr.error||ad.error||ts.error);
+    students=(st.data||[]).map(fromRow);
+    extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||'',groups:t.groups||[]});
+    extraAdmins={}; (ad.data||[]).forEach(a=>extraAdmins[a.id]={password:a.password});
+    trainerScores={}; (ts.data||[]).forEach(r=>trainerScores[r.trainer_id]=r.data||{});
+    lsSave(); rebuildUsers(); unsavedEdits=false; setConnStatus('cloud');
+    return true;
+  }catch(e){ console.warn('تعذّر تحديث البيانات من السحابة',e); return false; }
+}
+function renderReportsForRole(){
+  if(!currentUser) return;
+  const r=currentUser.role;
+  if(r==='admin'||r==='trainer'){ populateReportSelect(); loadReport(); }
+  else if(r==='student'){ showStudentOwnReport(); }
+  else if(r==='parent'){ showParentReport(); }
+}
+function manualRefreshReports(){
+  if(unsavedEdits){ showToast('لديك درجات غير محفوظة — احفظها أولاً','error'); return; }
+  showToast('جارٍ التحديث…','');
+  refreshFromCloud().then(ok=>{ renderReportsForRole(); showToast(ok?'تم تحديث البيانات من السحابة':'تعذّر التحديث — عُرضت آخر نسخة',ok?'success':'error'); });
+}
 
 /* ---------- 6. بناء المستخدمين ---------- */
 function rebuildUsers(){
@@ -943,8 +976,6 @@ function applyRoleRestrictions(){
     main.style.marginRight='0';
     topFilter.classList.add('hide');
     showSection('reports');
-    if(r==='student') showStudentOwnReport();
-    else showParentReport();
     return;
   }
 }
@@ -989,7 +1020,13 @@ function showSection(id,el){
   if(id==='trainer-tracking') renderTrainerTracking();
   if(id==='trainers') renderTrainers();
   if(id==='attendance') renderAttendanceTable();
-  if(id==='reports' && (currentUser.role==='admin'||currentUser.role==='trainer')) populateReportSelect();
+  if(id==='reports'){
+    renderReportsForRole();
+    if(!unsavedEdits) refreshFromCloud().then(ok=>{
+      const active=document.querySelector('.section.active');
+      if(ok && active && active.id==='sec-reports') renderReportsForRole();
+    });
+  }
 }
 
 /* ---------- 10. أدوات مساعدة ---------- */
@@ -1439,13 +1476,14 @@ function loadTracking(level){
       </tr>`).join('')}</tbody>`;
 }
 function onTrackInput(input,sid){
+  unsavedEdits=true;
   let v=+input.value; if(isNaN(v)) v=0; if(v>100){v=100;input.value=100;} if(v<0){v=0;input.value=0;}
   const s=students.find(x=>x.id===sid);
   s.scores[input.dataset.key]=v;
   document.getElementById('trkavg-'+sid).innerHTML=getBadgeHtml(getAvgScore(s));
 }
 function saveTracking(level){
-  rebuildUsers(); saveState();
+  rebuildUsers(); saveState(); unsavedEdits=false;
   showToast('تم حفظ كشف '+(level==='asas'?'الأساس':'المتقدم'),'success');
 }
 
@@ -1481,6 +1519,7 @@ function renderTrainerTracking(){
     }).join('')}</tbody>`;
 }
 function onScoreInput(input,tid,sid,week){
+  unsavedEdits=true;
   let v=+input.value; if(isNaN(v)) v=0; if(v>100){v=100;input.value=100;} if(v<0){v=0;input.value=0;}
   trainerScores[tid][sid]=trainerScores[tid][sid]||{};
   trainerScores[tid][sid][week]=trainerScores[tid][sid][week]||{};
@@ -1489,6 +1528,7 @@ function onScoreInput(input,tid,sid,week){
   document.getElementById('twavg-'+sid).innerHTML=calcStudentWeekAvg(tid,sid,week,prog.skills.length);
 }
 function onNoteInput(input,tid,sid,week){
+  unsavedEdits=true;
   trainerScores[tid][sid]=trainerScores[tid][sid]||{};
   trainerScores[tid][sid][week]=trainerScores[tid][sid][week]||{};
   trainerScores[tid][sid][week].note=input.value;
@@ -1510,7 +1550,7 @@ function saveTrainerScores(){
     for(let i=0;i<prog.skills.length;i++){ if(wk[i]&&wk[i].score>0){sum+=wk[i].score;n++;} }
     if(n) s.scores[key]=Math.round(sum/n);
   });
-  rebuildUsers(); saveState();
+  rebuildUsers(); saveState(); unsavedEdits=false;
   showToast('تم حفظ الدرجات ومزامنتها مع تقارير الطلاب','success');
 }
 
@@ -1555,11 +1595,13 @@ function saveAttendance(){ saveState(); showToast('تم حفظ سجل الحضو
 function populateReportSelect(){
   const sel=document.getElementById('reportStudentSelect');
   if(!sel) return;
+  const prev=sel.value;
   // الإدارة ترى كل الطلاب؛ المدرب يرى طلاب نطاقه (مستواه) فقط
   let list=students;
   if(currentUser && currentUser.role==='trainer') list=getTrainerStudents(currentUser);
   sel.innerHTML='<option value="">— اختر طالباً —</option>'+
     list.map(s=>`<option value="${s.id}">${s.name} — ${levelLabel(s.level)}</option>`).join('');
+  if(prev && list.some(s=>String(s.id)===prev)) sel.value=prev;
 }
 function loadReport(){
   const sel=document.getElementById('reportStudentSelect');
