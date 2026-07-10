@@ -633,6 +633,14 @@ tbody tr:last-child td{border-bottom:none}
         <div class="fg"><label>كلمة المرور</label><input id="trPw" placeholder="trainer9"></div>
         <div class="fg full"><label>رقم الجوال (لتسجيل الدخول)</label><input id="trPhone" inputmode="numeric" placeholder="05xxxxxxxx"></div>
         <div class="fg full"><label>البرنامج المخصص</label><select id="trProgram"></select></div>
+        <div class="fg full">
+          <label>المجموعات المسندة (اختياري — اتركها فارغة ليرى كل المجموعات)</label>
+          <div style="display:flex;gap:16px;padding:10px 2px">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;cursor:pointer"><input type="checkbox" id="trGroup1" value="1" style="width:17px;height:17px"> المجموعة 1</label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;cursor:pointer"><input type="checkbox" id="trGroup2" value="2" style="width:17px;height:17px"> المجموعة 2</label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;cursor:pointer"><input type="checkbox" id="trGroup3" value="3" style="width:17px;height:17px"> المجموعة 3</label>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -774,7 +782,7 @@ async function loadState(){
       ]);
       if(st.error||tr.error||ad.error||ts.error) throw (st.error||tr.error||ad.error||ts.error);
       students=(st.data||[]).map(fromRow);
-      extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||''});
+      extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||'',groups:t.groups||[]});
       extraAdmins={}; (ad.data||[]).forEach(a=>extraAdmins[a.id]={password:a.password});
       trainerScores={}; (ts.data||[]).forEach(r=>trainerScores[r.trainer_id]=r.data||{});
       lsSave();
@@ -800,7 +808,7 @@ async function cloudSaveNow(){
   if(saving){ scheduleCloudSave(); return; }
   saving=true; setConnStatus('saving');
   try{
-    const trs=Object.entries(extraTrainers).map(([id,t])=>({id,name:t.name,password:t.password,emoji:t.emoji||'🎓',program:t.programs[0],level:t.level,phone:t.phone||null}));
+    const trs=Object.entries(extraTrainers).map(([id,t])=>({id,name:t.name,password:t.password,emoji:t.emoji||'🎓',program:t.programs[0],level:t.level,phone:t.phone||null,groups:(t.groups&&t.groups.length)?t.groups:[]}));
     const ads=Object.entries(extraAdmins).map(([id,a])=>({id,password:a.password}));
     const tsRows=Object.entries(trainerScores).map(([tid,data])=>({trainer_id:tid,data}));
     const r1=await sb.from('students').upsert(students.map(toRow));
@@ -1313,8 +1321,9 @@ function getTrainersArray(){
 }
 function getTrainerStudents(trainer){
   const lvl=trainer.level;
-  if(lvl==='both') return students.slice();
-  return students.filter(s=>s.level===lvl);
+  let list = (lvl==='both') ? students.slice() : students.filter(s=>s.level===lvl);
+  if(trainer.groups && trainer.groups.length) list = list.filter(s=>trainer.groups.includes(s.group));
+  return list;
 }
 function renderTrainers(){
   const arr=getTrainersArray();
@@ -1327,6 +1336,7 @@ function renderTrainers(){
       <div class="meta">
         <span class="badge badge-orange">${p.label||'—'}</span>
         <span class="badge badge-navy">${t.level==='both'?'كل المستويات':levelLabel(t.level)}</span>
+        ${(t.groups&&t.groups.length)?`<span class="badge badge-orange">مجموعة ${t.groups.join('،')}</span>`:''}
       </div>
       <div style="color:var(--muted);font-size:13px">👥 ${cnt} طالب في نطاقه</div>
       <div style="color:var(--muted);font-size:12.5px;margin-top:3px">📱 ${t.phone||'—'}</div>
@@ -1347,6 +1357,9 @@ function openModal_addTrainer(){
   document.getElementById('trId').value='';
   document.getElementById('trPw').value='';
   document.getElementById('trPhone').value='';
+  document.getElementById('trGroup1').checked=false;
+  document.getElementById('trGroup2').checked=false;
+  document.getElementById('trGroup3').checked=false;
   fillProgramSelect(document.getElementById('trProgram'),'english_asas');
   document.getElementById('trDeleteBtn').classList.add('hide');
   document.getElementById('trainerModal').classList.add('open');
@@ -1359,6 +1372,10 @@ function openEditTrainerModal(id){
   document.getElementById('trId').value=id;
   document.getElementById('trPw').value=t.password;
   document.getElementById('trPhone').value=t.phone||'';
+  const trg=t.groups||[];
+  document.getElementById('trGroup1').checked=trg.includes('1');
+  document.getElementById('trGroup2').checked=trg.includes('2');
+  document.getElementById('trGroup3').checked=trg.includes('3');
   fillProgramSelect(document.getElementById('trProgram'),t.programs[0]);
   document.getElementById('trDeleteBtn').classList.toggle('hide',!!STATIC_USERS[id]);
   document.getElementById('trainerModal').classList.add('open');
@@ -1370,10 +1387,11 @@ function saveTrainerModal(){
   const pw=document.getElementById('trPw').value.trim()||'trainer';
   const phone=document.getElementById('trPhone').value.trim();
   const prog=document.getElementById('trProgram').value;
+  const groups=['1','2','3'].filter(g=>document.getElementById('trGroup'+g).checked);
   if(!name||!id){ showToast('الاسم والسجل مطلوبان','error'); return; }
   if(!phone){ showToast('رقم الجوال مطلوب لتسجيل دخول المدرب','error'); return; }
   const level=PROGRAM_CONFIG[prog].level;
-  const rec={role:'trainer',name,password:pw,emoji:'🎓',programs:[prog],level,phone};
+  const rec={role:'trainer',name,password:pw,emoji:'🎓',programs:[prog],level,phone,groups};
   if(editId && STATIC_USERS[editId]){
     // المدربون الثابتون: نسمح بتعديل الاسم/كلمة المرور/البرنامج عبر extraTrainers overlay
     extraTrainers[editId]=rec;
