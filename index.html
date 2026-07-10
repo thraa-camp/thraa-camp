@@ -134,6 +134,8 @@ input,select,textarea{font-family:inherit}
 .user-chip .info small{color:#9fb0d6;font-size:11.5px}
 .btn-logout{width:100%;padding:11px;border-radius:11px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s}
 .btn-logout:hover{background:var(--red)}
+.btn-side-action{width:100%;padding:11px;border-radius:11px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;margin-bottom:8px}
+.btn-side-action:hover{background:var(--orange)}
 
 .main{flex:1;margin-right:260px;min-width:0;display:flex;flex-direction:column}
 .topbar{
@@ -381,7 +383,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
 
     <div class="field">
-      <label>رقم السجل المدني</label>
+      <label id="loginIdLabel">رقم السجل المدني</label>
       <input type="text" id="loginId" inputmode="numeric" placeholder="10 أرقام" autocomplete="off">
     </div>
     <div class="field">
@@ -427,6 +429,7 @@ tbody tr:last-child td{border-bottom:none}
           <div class="info"><b id="sideName">—</b><small id="sideRole">—</small></div>
         </div>
         <div data-conn style="text-align:center;font-size:11.5px;font-weight:700;margin-bottom:10px;color:#9fb0d6">💾 تخزين محلي</div>
+        <button class="btn-side-action" onclick="openChangePasswordModal()"><span>🔑</span> تغيير كلمة المرور</button>
         <button class="btn-logout" onclick="doLogout()"><span>🚪</span> تسجيل الخروج</button>
       </div>
     </aside>
@@ -442,6 +445,7 @@ tbody tr:last-child td{border-bottom:none}
             <button data-lvl="asas" onclick="filterByLevel('asas',this)">الأساس</button>
             <button data-lvl="mutaqadem" onclick="filterByLevel('mutaqadem',this)">المتقدم</button>
           </div>
+          <button class="btn btn-ghost btn-sm no-print" id="topChangePw" onclick="openChangePasswordModal()" style="display:none">🔑 كلمة المرور</button>
           <button class="btn btn-danger btn-sm no-print" id="topLogout" onclick="doLogout()" style="display:none">🚪 تسجيل الخروج</button>
         </div>
       </div>
@@ -630,8 +634,9 @@ tbody tr:last-child td{border-bottom:none}
       <input type="hidden" id="trEditId">
       <div class="form-grid">
         <div class="fg full"><label>اسم المدرب</label><input id="trName" placeholder="أ. الاسم"></div>
-        <div class="fg"><label>رقم السجل (اسم المستخدم)</label><input id="trId" inputmode="numeric" placeholder="2000000009"></div>
+        <div class="fg"><label>رقم السجل (معرّف داخلي)</label><input id="trId" inputmode="numeric" placeholder="2000000009"></div>
         <div class="fg"><label>كلمة المرور</label><input id="trPw" placeholder="trainer9"></div>
+        <div class="fg full"><label>رقم الجوال (لتسجيل الدخول)</label><input id="trPhone" inputmode="numeric" placeholder="05xxxxxxxx"></div>
         <div class="fg full"><label>البرنامج المخصص</label><select id="trProgram"></select></div>
       </div>
     </div>
@@ -639,6 +644,20 @@ tbody tr:last-child td{border-bottom:none}
       <button class="btn btn-primary" onclick="saveTrainerModal()">💾 حفظ</button>
       <button class="btn btn-ghost" onclick="closeModal('trainerModal')">إلغاء</button>
       <button class="btn btn-danger hide" id="trDeleteBtn" onclick="deleteTrainer()">🗑️ حذف</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pwModal">
+  <div class="modal">
+    <div class="modal-head"><h3>🔑 تغيير كلمة المرور</h3><button class="modal-close" onclick="closeModal('pwModal')">×</button></div>
+    <div class="modal-body">
+      <div class="fg" style="margin-bottom:14px"><label>كلمة المرور الجديدة</label><input id="pwNew" type="password" placeholder="4 أحرف/أرقام على الأقل"></div>
+      <div class="fg"><label>تأكيد كلمة المرور</label><input id="pwConfirm" type="password" placeholder="أعد كتابتها"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="saveNewPassword()">💾 حفظ كلمة المرور</button>
+      <button class="btn btn-ghost" onclick="closeModal('pwModal')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -669,14 +688,14 @@ const BRAND_LOGO_URI="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org
 /* ---------- 2. المستخدمون الثابتون (admins + trainers) ---------- */
 const STATIC_USERS = {
   '1000000001':{role:'admin',name:'إدارة المعسكر',password:'admin123',displayName:'إدارة المعسكر',emoji:'🛡️'},
-  '2000000001':{role:'trainer',name:'أ. عبدالله المطيري',password:'trainer1',emoji:'🎓',programs:['english_asas'],level:'asas'},
-  '2000000002':{role:'trainer',name:'أ. فهد القحطاني',password:'trainer2',emoji:'🎓',programs:['english_mutaqadem'],level:'mutaqadem'},
-  '2000000003':{role:'trainer',name:'أ. سعد الزهراني',password:'trainer3',emoji:'🔬',programs:['steam'],level:'asas'},
-  '2000000004':{role:'trainer',name:'أ. محمد العتيبي',password:'trainer4',emoji:'🤖',programs:['arduino'],level:'mutaqadem'},
-  '2000000005':{role:'trainer',name:'أ. خالد الشمري',password:'trainer5',emoji:'📚',programs:['quran'],level:'both'},
-  '2000000006':{role:'trainer',name:'أ. ناصر الغامدي',password:'trainer6',emoji:'⭐',programs:['leadership'],level:'both'},
-  '2000000007':{role:'trainer',name:'أ. وليد الحربي',password:'trainer7',emoji:'⚽',programs:['sports'],level:'both'},
-  '2000000008':{role:'trainer',name:'أ. تركي البقمي',password:'trainer8',emoji:'🎯',programs:['self'],level:'both'}
+  '2000000001':{role:'trainer',name:'أ. عبدالله المطيري',password:'trainer1',emoji:'🎓',programs:['english_asas'],level:'asas',phone:'0551110001'},
+  '2000000002':{role:'trainer',name:'أ. فهد القحطاني',password:'trainer2',emoji:'🎓',programs:['english_mutaqadem'],level:'mutaqadem',phone:'0551110002'},
+  '2000000003':{role:'trainer',name:'أ. سعد الزهراني',password:'trainer3',emoji:'🔬',programs:['steam'],level:'asas',phone:'0551110003'},
+  '2000000004':{role:'trainer',name:'أ. محمد العتيبي',password:'trainer4',emoji:'🤖',programs:['arduino'],level:'mutaqadem',phone:'0551110004'},
+  '2000000005':{role:'trainer',name:'أ. خالد الشمري',password:'trainer5',emoji:'📚',programs:['quran'],level:'both',phone:'0551110005'},
+  '2000000006':{role:'trainer',name:'أ. ناصر الغامدي',password:'trainer6',emoji:'⭐',programs:['leadership'],level:'both',phone:'0551110006'},
+  '2000000007':{role:'trainer',name:'أ. وليد الحربي',password:'trainer7',emoji:'⚽',programs:['sports'],level:'both',phone:'0551110007'},
+  '2000000008':{role:'trainer',name:'أ. تركي البقمي',password:'trainer8',emoji:'🎯',programs:['self'],level:'both',phone:'0551110008'}
 };
 
 /* ---------- 3. بيانات الطلاب التجريبية (24) ---------- */
@@ -710,7 +729,9 @@ function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 /* ---------- 4. الحالة العامة ---------- */
 let students = [];
 let USERS = {};
+let USERS_BY_PHONE = {};         // فهرسة الدخول برقم الجوال (مدربون + أولياء أمور) -> المعرّف الفعلي
 let extraTrainers = {};          // مدربون مضافون من الإدارة
+let extraAdmins = {};            // تعديلات كلمة مرور الإدارة
 let trainerScores = {};          // trainerScores[tid][sid][week][skillIdx]={score}
 let currentUser = null;          // {id, ...user}
 let levelFilter = '';            // فلتر المستوى العلوي
@@ -737,12 +758,12 @@ function setConnStatus(mode){
 }
 
 // كاش محلي / احتياطي
-function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({students,extraTrainers,trainerScores})); }catch(e){ console.warn('تعذّر الحفظ المحلي',e); } }
-function lsLoad(){ try{ const raw=localStorage.getItem(LS); if(raw){ const d=JSON.parse(raw); students=d.students||[]; extraTrainers=d.extraTrainers||{}; trainerScores=d.trainerScores||{}; } }catch(e){ console.warn('تعذّر التحميل المحلي',e); } }
+function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({students,extraTrainers,extraAdmins,trainerScores})); }catch(e){ console.warn('تعذّر الحفظ المحلي',e); } }
+function lsLoad(){ try{ const raw=localStorage.getItem(LS); if(raw){ const d=JSON.parse(raw); students=d.students||[]; extraTrainers=d.extraTrainers||{}; extraAdmins=d.extraAdmins||{}; trainerScores=d.trainerScores||{}; } }catch(e){ console.warn('تعذّر التحميل المحلي',e); } }
 
 // تحويل صفوف Supabase ↔ كائنات التطبيق
-function toRow(s){ return {id:s.id,name:s.name,id_num:s.idNum,level:s.level,group_num:s.group,age:s.age,parent:s.parent,parent_phone:s.parentPhone,parent_id:s.parentId,scores:s.scores||{},attendance:s.attendance||{}}; }
-function fromRow(r){ return {id:r.id,name:r.name,idNum:r.id_num||'',level:r.level||'asas',group:r.group_num||'1',age:r.age||12,parent:r.parent||'',parentPhone:r.parent_phone||'',parentId:r.parent_id||'',scores:r.scores||{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:r.attendance||{}}; }
+function toRow(s){ return {id:s.id,name:s.name,id_num:s.idNum,level:s.level,group_num:s.group,age:s.age,parent:s.parent,parent_phone:s.parentPhone,parent_id:s.parentId,scores:s.scores||{},attendance:s.attendance||{},password:s.password||null,parent_password:s.parentPassword||null}; }
+function fromRow(r){ return {id:r.id,name:r.name,idNum:r.id_num||'',level:r.level||'asas',group:r.group_num||'1',age:r.age||12,parent:r.parent||'',parentPhone:r.parent_phone||'',parentId:r.parent_id||'',scores:r.scores||{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:r.attendance||{},password:r.password||undefined,parentPassword:r.parent_password||undefined}; }
 
 // تحميل الحالة
 async function loadState(){
@@ -750,14 +771,16 @@ async function loadState(){
   let usingCloud=false;
   if(sb){
     try{
-      const [st,tr,ts]=await Promise.all([
+      const [st,tr,ad,ts]=await Promise.all([
         sb.from('students').select('*').order('id'),
         sb.from('trainers').select('*'),
+        sb.from('admins').select('*'),
         sb.from('trainer_scores').select('*')
       ]);
-      if(st.error||tr.error||ts.error) throw (st.error||tr.error||ts.error);
+      if(st.error||tr.error||ad.error||ts.error) throw (st.error||tr.error||ad.error||ts.error);
       students=(st.data||[]).map(fromRow);
-      extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level});
+      extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||''});
+      extraAdmins={}; (ad.data||[]).forEach(a=>extraAdmins[a.id]={password:a.password});
       trainerScores={}; (ts.data||[]).forEach(r=>trainerScores[r.trainer_id]=r.data||{});
       lsSave();
       usingCloud=true;
@@ -782,11 +805,13 @@ async function cloudSaveNow(){
   if(saving){ scheduleCloudSave(); return; }
   saving=true; setConnStatus('saving');
   try{
-    const trs=Object.entries(extraTrainers).map(([id,t])=>({id,name:t.name,password:t.password,emoji:t.emoji||'🎓',program:t.programs[0],level:t.level}));
+    const trs=Object.entries(extraTrainers).map(([id,t])=>({id,name:t.name,password:t.password,emoji:t.emoji||'🎓',program:t.programs[0],level:t.level,phone:t.phone||null}));
+    const ads=Object.entries(extraAdmins).map(([id,a])=>({id,password:a.password}));
     const tsRows=Object.entries(trainerScores).map(([tid,data])=>({trainer_id:tid,data}));
     const r1=await sb.from('students').upsert(students.map(toRow));
     if(r1.error) throw r1.error;
     if(trs.length){ const r2=await sb.from('trainers').upsert(trs); if(r2.error) throw r2.error; }
+    if(ads.length){ const r4=await sb.from('admins').upsert(ads); if(r4.error) throw r4.error; }
     if(tsRows.length){ const r3=await sb.from('trainer_scores').upsert(tsRows); if(r3.error) throw r3.error; }
     setConnStatus('cloud');
   }catch(e){
@@ -802,22 +827,28 @@ async function cloudDelete(table,col,val){ const sb=cloud(); if(!sb) return; try
 /* ---------- 6. بناء المستخدمين ---------- */
 function rebuildUsers(){
   USERS = {};
+  USERS_BY_PHONE = {};
   Object.entries(STATIC_USERS).forEach(([k,v])=>USERS[k]={...v});
   Object.entries(extraTrainers).forEach(([k,v])=>USERS[k]={...v});
-  // إكمال أسماء العرض للمدربين
-  Object.values(USERS).forEach(u=>{
+  Object.entries(extraAdmins).forEach(([k,v])=>{ if(USERS[k]) USERS[k]={...USERS[k], ...v}; });
+  // إكمال أسماء العرض للمدربين + فهرسة الدخول برقم الجوال
+  Object.entries(USERS).forEach(([id,u])=>{
     if(u.role==='trainer'){
       u.displayName = u.name;
       const p = PROGRAM_CONFIG[u.programs[0]];
       u.programLabel = p ? p.label : '';
+      if(u.phone) USERS_BY_PHONE[u.phone]=id;
     }
   });
   buildDynamicUsers();
 }
 function buildDynamicUsers(){
   students.forEach(s=>{
-    if(s.idNum) USERS[s.idNum]={role:'student',name:s.name,password:'student1',displayName:s.name,emoji:'🧑‍🎓',studentId:s.id};
-    if(s.parentId) USERS[s.parentId]={role:'parent',name:s.parent,password:'parent1',displayName:s.parent,emoji:'👨‍👩‍👦',childId:s.id};
+    if(s.idNum) USERS[s.idNum]={role:'student',name:s.name,password:s.password||'student1',displayName:s.name,emoji:'🧑‍🎓',studentId:s.id};
+    if(s.parentId){
+      USERS[s.parentId]={role:'parent',name:s.parent,password:s.parentPassword||'parent1',displayName:s.parent,emoji:'👨‍👩‍👦',childId:s.id,phone:s.parentPhone};
+      if(s.parentPhone) USERS_BY_PHONE[s.parentPhone]=s.parentId;
+    }
   });
 }
 
@@ -828,27 +859,35 @@ function selectLoginRole(role,el){
   document.querySelectorAll('.role-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('loginError').textContent='';
+  const needsPhone=(role==='trainer'||role==='parent');
+  document.getElementById('loginIdLabel').textContent = needsPhone?'رقم الجوال':'رقم السجل المدني';
+  document.getElementById('loginId').placeholder = needsPhone?'05xxxxxxxx':'10 أرقام';
 }
 function togglePwVisibility(){
   const i=document.getElementById('loginPw');
   i.type = i.type==='password'?'text':'password';
 }
 function fillDemo(){
-  const map={admin:['1000000001','admin123'],trainer:['2000000001','trainer1'],student:[students[0]?.idNum||'','student1'],parent:[students[0]?.parentId||'','parent1']};
-  const [id,pw]=map[loginRole];
+  let id='', pw='';
+  if(loginRole==='admin'){ id='1000000001'; pw='admin123'; }
+  else if(loginRole==='trainer'){ const t=USERS['2000000001']; id=(t&&t.phone)||'0551110001'; pw=(t&&t.password)||'trainer1'; }
+  else if(loginRole==='student'){ const s=students[0]; id=s?.idNum||''; pw=(s&&s.password)||'student1'; }
+  else if(loginRole==='parent'){ const s=students[0]; id=s?.parentPhone||''; pw=(s&&s.parentPassword)||'parent1'; }
   document.getElementById('loginId').value=id;
   document.getElementById('loginPw').value=pw;
 }
 function doLogin(){
-  const id=document.getElementById('loginId').value.trim();
+  const raw=document.getElementById('loginId').value.trim();
   const pw=document.getElementById('loginPw').value;
   const err=document.getElementById('loginError');
   if(!dataReady){ err.textContent='جارٍ تحميل البيانات، انتظر لحظة…'; return; }
-  const u=USERS[id];
-  if(!u){ err.textContent='رقم السجل غير مسجّل في النظام'; return; }
+  const needsPhone=(loginRole==='trainer'||loginRole==='parent');
+  const actualId = needsPhone ? USERS_BY_PHONE[raw] : raw;
+  const u = actualId ? USERS[actualId] : null;
+  if(!u){ err.textContent = needsPhone?'رقم الجوال غير مسجّل في النظام':'رقم السجل غير مسجّل في النظام'; return; }
   if(u.password!==pw){ err.textContent='كلمة المرور غير صحيحة'; return; }
   if(u.role!==loginRole){ err.textContent='هذا الحساب لا يطابق الدور المختار'; return; }
-  currentUser={id, ...u};
+  currentUser={id:actualId, ...u};
   enterApp();
 }
 function enterApp(){
@@ -877,6 +916,7 @@ function doLogout(){
   document.querySelector('.main').style.marginRight='';
   document.getElementById('topLevelFilter').classList.remove('hide');
   document.getElementById('topLogout').style.display='none';
+  document.getElementById('topChangePw').style.display='none';
   showToast('تم تسجيل الخروج بنجاح','success');
 }
 
@@ -892,6 +932,7 @@ function applyRoleRestrictions(){
   const r=currentUser.role;
   // زر الخروج في الشريط العلوي: يظهر لكل دور عدا الإدارة (لضمان الوصول إليه دائماً)
   document.getElementById('topLogout').style.display = (r==='admin') ? 'none' : 'inline-flex';
+  document.getElementById('topChangePw').style.display = (r==='admin') ? 'none' : 'inline-flex';
   if(r==='admin'){ showSection('dashboard'); return; }
 
   if(r==='trainer'){
@@ -991,6 +1032,31 @@ function showToast(msg,type=''){
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-30px)';setTimeout(()=>t.remove(),300);},2800);
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openChangePasswordModal(){
+  document.getElementById('pwNew').value='';
+  document.getElementById('pwConfirm').value='';
+  document.getElementById('pwModal').classList.add('open');
+}
+function saveNewPassword(){
+  const pw1=document.getElementById('pwNew').value;
+  const pw2=document.getElementById('pwConfirm').value;
+  if(!pw1 || pw1.length<4){ showToast('كلمة المرور يجب ألا تقل عن 4 أحرف/أرقام','error'); return; }
+  if(pw1!==pw2){ showToast('كلمتا المرور غير متطابقتين','error'); return; }
+  const role=currentUser.role, id=currentUser.id;
+  if(role==='admin'){
+    extraAdmins[id]={password:pw1};
+  }else if(role==='trainer'){
+    extraTrainers[id]={role:'trainer',name:currentUser.name,password:pw1,emoji:currentUser.emoji,programs:currentUser.programs,level:currentUser.level,phone:currentUser.phone};
+  }else if(role==='student'){
+    const s=students.find(x=>x.id===currentUser.studentId); if(s) s.password=pw1;
+  }else if(role==='parent'){
+    const s=students.find(x=>x.id===currentUser.childId); if(s) s.parentPassword=pw1;
+  }
+  currentUser.password=pw1;
+  rebuildUsers(); saveState();
+  closeModal('pwModal');
+  showToast('تم تغيير كلمة المرور بنجاح','success');
+}
 
 /* ---------- 11. الفلترة ---------- */
 function filterByLevel(lvl,el){
@@ -1277,6 +1343,7 @@ function renderTrainers(){
         <span class="badge badge-navy">${t.level==='both'?'كل المستويات':levelLabel(t.level)}</span>
       </div>
       <div style="color:var(--muted);font-size:13px">👥 ${cnt} طالب في نطاقه</div>
+      <div style="color:var(--muted);font-size:12.5px;margin-top:3px">📱 ${t.phone||'—'}</div>
       <div class="acts">
         <button class="btn btn-ghost btn-sm" onclick="openEditTrainerModal('${t.id}')">✏️ تعديل</button>
         ${editable?`<button class="btn btn-danger btn-sm" onclick="deleteTrainer('${t.id}')">🗑️</button>`:''}
@@ -1293,6 +1360,7 @@ function openModal_addTrainer(){
   document.getElementById('trName').value='';
   document.getElementById('trId').value='';
   document.getElementById('trPw').value='';
+  document.getElementById('trPhone').value='';
   fillProgramSelect(document.getElementById('trProgram'),'english_asas');
   document.getElementById('trDeleteBtn').classList.add('hide');
   document.getElementById('trainerModal').classList.add('open');
@@ -1304,6 +1372,7 @@ function openEditTrainerModal(id){
   document.getElementById('trName').value=t.name;
   document.getElementById('trId').value=id;
   document.getElementById('trPw').value=t.password;
+  document.getElementById('trPhone').value=t.phone||'';
   fillProgramSelect(document.getElementById('trProgram'),t.programs[0]);
   document.getElementById('trDeleteBtn').classList.toggle('hide',!!STATIC_USERS[id]);
   document.getElementById('trainerModal').classList.add('open');
@@ -1313,10 +1382,12 @@ function saveTrainerModal(){
   const name=document.getElementById('trName').value.trim();
   const id=document.getElementById('trId').value.trim();
   const pw=document.getElementById('trPw').value.trim()||'trainer';
+  const phone=document.getElementById('trPhone').value.trim();
   const prog=document.getElementById('trProgram').value;
   if(!name||!id){ showToast('الاسم والسجل مطلوبان','error'); return; }
+  if(!phone){ showToast('رقم الجوال مطلوب لتسجيل دخول المدرب','error'); return; }
   const level=PROGRAM_CONFIG[prog].level;
-  const rec={role:'trainer',name,password:pw,emoji:'🎓',programs:[prog],level};
+  const rec={role:'trainer',name,password:pw,emoji:'🎓',programs:[prog],level,phone};
   if(editId && STATIC_USERS[editId]){
     // المدربون الثابتون: نسمح بتعديل الاسم/كلمة المرور/البرنامج عبر extraTrainers overlay
     extraTrainers[editId]=rec;
