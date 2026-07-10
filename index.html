@@ -463,6 +463,7 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
         <a class="nav-item" data-sec="tracking-mutaqadem" onclick="showSection('tracking-mutaqadem',this)"><span class="ic">📋</span>كشف المتقدم</a>
         <a class="nav-item" data-sec="trainer-tracking" onclick="showSection('trainer-tracking',this)"><span class="ic">✍️</span>رصد التقييم</a>
         <a class="nav-item" data-sec="trainers" onclick="showSection('trainers',this)"><span class="ic">👨‍🏫</span>المدربون</a>
+        <a class="nav-item" data-sec="supervisors" onclick="showSection('supervisors',this)"><span class="ic">🧑‍💼</span>المشرفون</a>
         <a class="nav-item" data-sec="attendance" onclick="showSection('attendance',this)"><span class="ic">📅</span>الحضور</a>
         <a class="nav-item" data-sec="points" onclick="showSection('points',this)"><span class="ic">⭐</span>النقاط</a>
         <a class="nav-item" data-sec="reports" onclick="showSection('reports',this)"><span class="ic">📄</span>التقارير</a>
@@ -526,6 +527,10 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
           <div class="card">
             <div class="card-title">🏅 الإنجازات الكمية للمعسكر</div>
             <div class="table-wrap"><table id="counterStatsTable"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⭐ أعلى الطلاب نقاطاً</div>
+            <div class="table-wrap"><table id="topPointsTable"></table></div>
           </div>
         </section>
 
@@ -593,6 +598,15 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
             <button class="btn btn-primary" onclick="openModal_addTrainer()">➕ إضافة مدرب</button>
           </div>
           <div class="trainer-grid" id="trainersGrid"></div>
+        </section>
+
+        <!-- المشرفون -->
+        <section class="section" id="sec-supervisors">
+          <div class="toolbar">
+            <div class="grow"></div>
+            <button class="btn btn-primary" onclick="openModal_addSupervisor()">➕ إضافة مشرف</button>
+          </div>
+          <div class="trainer-grid" id="supervisorsGrid"></div>
         </section>
 
         <!-- الحضور -->
@@ -729,6 +743,26 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
     <div class="modal-foot">
       <button class="btn btn-primary" onclick="saveNewPassword()">💾 حفظ كلمة المرور</button>
       <button class="btn btn-ghost" onclick="closeModal('pwModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="supervisorModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="supervisorModalTitle">إضافة مشرف</h3><button class="modal-close" onclick="closeModal('supervisorModal')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="svEditId">
+      <div class="form-grid">
+        <div class="fg full"><label>اسم المشرف</label><input id="svName" placeholder="الاسم"></div>
+        <div class="fg"><label>رقم السجل (دخول)</label><input id="svId" inputmode="numeric" placeholder="3000000003"></div>
+        <div class="fg"><label>كلمة المرور</label><input id="svPw" placeholder="super3"></div>
+        <div class="fg full"><label>النوع</label><select id="svRole"><option value="academic_supervisor">مشرف علمي</option><option value="system_supervisor">مشرف نظام</option></select></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="saveSupervisorModal()">💾 حفظ</button>
+      <button class="btn btn-ghost" onclick="closeModal('supervisorModal')">إلغاء</button>
+      <button class="btn btn-danger hide" id="svDeleteBtn" onclick="deleteSupervisor()">🗑️ حذف</button>
     </div>
   </div>
 </div>
@@ -895,6 +929,7 @@ let USERS = {};
 let USERS_BY_PHONE = {};         // فهرسة الدخول برقم الجوال (مدربون + أولياء أمور) -> المعرّف الفعلي
 let extraTrainers = {};          // مدربون مضافون من الإدارة
 let extraAdmins = {};            // تعديلات كلمة مرور الإدارة
+let extraSupervisors = {};       // مشرفون (تعديل/إضافة من الإدارة)
 let trainerScores = {};          // trainerScores[tid][sid][week][skillIdx]={score}
 let currentUser = null;          // {id, ...user}
 let levelFilter = '';            // فلتر المستوى العلوي
@@ -921,8 +956,8 @@ function setConnStatus(mode){
 }
 
 // كاش محلي / احتياطي
-function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({students,extraTrainers,extraAdmins,trainerScores})); }catch(e){ console.warn('تعذّر الحفظ المحلي',e); } }
-function lsLoad(){ try{ const raw=localStorage.getItem(LS); if(raw){ const d=JSON.parse(raw); students=d.students||[]; extraTrainers=d.extraTrainers||{}; extraAdmins=d.extraAdmins||{}; trainerScores=d.trainerScores||{}; } }catch(e){ console.warn('تعذّر التحميل المحلي',e); } }
+function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({students,extraTrainers,extraAdmins,extraSupervisors,trainerScores})); }catch(e){ console.warn('تعذّر الحفظ المحلي',e); } }
+function lsLoad(){ try{ const raw=localStorage.getItem(LS); if(raw){ const d=JSON.parse(raw); students=d.students||[]; extraTrainers=d.extraTrainers||{}; extraAdmins=d.extraAdmins||{}; extraSupervisors=d.extraSupervisors||{}; trainerScores=d.trainerScores||{}; } }catch(e){ console.warn('تعذّر التحميل المحلي',e); } }
 
 // تحويل صفوف Supabase ↔ كائنات التطبيق
 function toRow(s){ return {id:s.id,name:s.name,id_num:s.idNum,level:s.level,group_num:s.group,age:s.age,parent:s.parent,parent_phone:s.parentPhone,parent_id:s.parentId,scores:s.scores||{},attendance:s.attendance||{},password:s.password||null,parent_password:s.parentPassword||null,points:s.points||0,points_log:s.pointsLog||[]}; }
@@ -945,6 +980,7 @@ async function loadState(){
       extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||'',groups:t.groups||[]});
       extraAdmins={}; (ad.data||[]).forEach(a=>extraAdmins[a.id]={password:a.password});
       trainerScores={}; (ts.data||[]).forEach(r=>trainerScores[r.trainer_id]=r.data||{});
+      try{ const sv=await sb.from('supervisors').select('*'); if(!sv.error&&sv.data){ extraSupervisors={}; sv.data.forEach(x=>extraSupervisors[x.id]={role:x.role,name:x.name,password:x.password,displayName:x.name,emoji:x.emoji||supEmoji(x.role)}); } }catch(e){}
       lsSave();
       usingCloud=true;
       setConnStatus('cloud');
@@ -970,11 +1006,13 @@ async function cloudSaveNow(){
   try{
     const trs=Object.entries(extraTrainers).map(([id,t])=>({id,name:t.name,password:t.password,emoji:t.emoji||'🎓',program:t.programs[0],level:t.level,phone:t.phone||null,groups:(t.groups&&t.groups.length)?t.groups:[]}));
     const ads=Object.entries(extraAdmins).map(([id,a])=>({id,password:a.password}));
+    const svs=Object.entries(extraSupervisors).map(([id,s])=>({id,role:s.role,name:s.name,password:s.password,emoji:s.emoji||supEmoji(s.role)}));
     const tsRows=Object.entries(trainerScores).map(([tid,data])=>({trainer_id:tid,data}));
     const r1=await sb.from('students').upsert(students.map(toRow));
     if(r1.error) throw r1.error;
     if(trs.length){ const r2=await sb.from('trainers').upsert(trs); if(r2.error) throw r2.error; }
     if(ads.length){ const r4=await sb.from('admins').upsert(ads); if(r4.error) throw r4.error; }
+    if(svs.length){ const r5=await sb.from('supervisors').upsert(svs); if(r5.error) throw r5.error; }
     if(tsRows.length){ const r3=await sb.from('trainer_scores').upsert(tsRows); if(r3.error) throw r3.error; }
     setConnStatus('cloud');
   }catch(e){
@@ -1002,6 +1040,7 @@ async function refreshFromCloud(){
     extraTrainers={}; (tr.data||[]).forEach(t=>extraTrainers[t.id]={role:'trainer',name:t.name,password:t.password,emoji:t.emoji||'🎓',programs:[t.program],level:t.level,phone:t.phone||'',groups:t.groups||[]});
     extraAdmins={}; (ad.data||[]).forEach(a=>extraAdmins[a.id]={password:a.password});
     trainerScores={}; (ts.data||[]).forEach(r=>trainerScores[r.trainer_id]=r.data||{});
+    try{ const sv=await sb.from('supervisors').select('*'); if(!sv.error&&sv.data){ extraSupervisors={}; sv.data.forEach(x=>extraSupervisors[x.id]={role:x.role,name:x.name,password:x.password,displayName:x.name,emoji:x.emoji||supEmoji(x.role)}); } }catch(e){}
     lsSave(); rebuildUsers(); unsavedEdits=false; setConnStatus('cloud');
     return true;
   }catch(e){ console.warn('تعذّر تحديث البيانات من السحابة',e); return false; }
@@ -1026,6 +1065,7 @@ function rebuildUsers(){
   Object.entries(STATIC_USERS).forEach(([k,v])=>USERS[k]={...v});
   Object.entries(extraTrainers).forEach(([k,v])=>USERS[k]={...v});
   Object.entries(extraAdmins).forEach(([k,v])=>{ if(USERS[k]) USERS[k]={...USERS[k], ...v}; });
+  Object.entries(extraSupervisors).forEach(([k,v])=>USERS[k]={...v});
   // إكمال أسماء العرض للمدربين + فهرسة الدخول برقم الجوال
   Object.entries(USERS).forEach(([id,u])=>{
     if(u.role==='trainer'){
@@ -1122,17 +1162,17 @@ function applyRoleRestrictions(){
   document.getElementById('topChangePw').style.display = fullStaff ? 'none' : 'inline-flex';
   if(r==='admin'){ showSection('dashboard'); return; }
   if(r==='academic_supervisor'){
-    ['trainer-tracking','trainers','import'].forEach(hideNav);
+    ['trainer-tracking','trainers','supervisors','import'].forEach(hideNav);
     showSection('dashboard'); return;
   }
   if(r==='system_supervisor'){
-    ['tracking-asas','tracking-mutaqadem','trainer-tracking','trainers','import'].forEach(hideNav);
+    ['tracking-asas','tracking-mutaqadem','trainer-tracking','trainers','supervisors','import'].forEach(hideNav);
     showSection('dashboard'); return;
   }
 
   if(r==='trainer'){
     // المدرب: رصد التقييم + مدخل تقارير محدود
-    ['dashboard','students','trainers','import','attendance'].forEach(hideNav);
+    ['dashboard','students','trainers','supervisors','import','attendance'].forEach(hideNav);
     // كشوف عامة: نبقي كشف مستواه فقط
     topFilter.classList.add('hide');
     showSection('trainer-tracking');
@@ -1161,6 +1201,7 @@ const SEC_TITLES={
   trainers:['المدربون','إدارة المدربين والبرامج'],
   attendance:['الحضور','سجل الحضور اليومي'],
   reports:['التقارير','التقارير الفردية للطلاب'],
+  supervisors:['المشرفون','إدارة حسابات المشرفين'],
   points:['النقاط','منح وخصم نقاط الطلاب'],
   import:['استيراد Excel','استيراد بيانات الطلاب']
 };
@@ -1194,6 +1235,7 @@ function showSection(id,el){
   if(id==='tracking-mutaqadem') loadTracking('mutaqadem');
   if(id==='trainer-tracking') renderTrainerTracking();
   if(id==='trainers') renderTrainers();
+  if(id==='supervisors') renderSupervisors();
   if(id==='attendance') renderAttendanceTable();
   if(id==='points') renderPoints();
   if(id==='reports'){
@@ -1322,6 +1364,7 @@ function renderDashboard(){
   // الرسوم البيانية
   renderCharts(list);
   renderCounterStats(list);
+  renderTopPoints(list);
 }
 function renderCounterStats(list){
   const el=document.getElementById('counterStatsTable'); if(!el) return;
@@ -1552,6 +1595,66 @@ function deleteStudentFromEdit(){
 }
 
 /* ---------- 15. المدربون ---------- */
+function getSupervisorsArray(){
+  return Object.entries(USERS).filter(([k,u])=>u.role==='academic_supervisor'||u.role==='system_supervisor').map(([id,u])=>({id,...u}));
+}
+function supEmoji(role){ return role==='academic_supervisor'?'🔬':'🧭'; }
+function renderSupervisors(){
+  const arr=getSupervisorsArray();
+  document.getElementById('supervisorsGrid').innerHTML=arr.map(t=>{
+    const editable=!STATIC_USERS[t.id];
+    return `<div class="tcard" style="border-top-color:#7c3aed">
+      <div class="th"><div class="em">${t.emoji||supEmoji(t.role)}</div><div><b>${t.name}</b><small>${t.id}</small></div></div>
+      <div class="meta"><span class="badge badge-navy">${roleLabel(t.role)}</span></div>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" onclick="openEditSupervisorModal('${t.id}')">✏️ تعديل</button>
+        ${editable?`<button class="btn btn-danger btn-sm" onclick="deleteSupervisor('${t.id}')">🗑️</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function openModal_addSupervisor(){
+  document.getElementById('supervisorModalTitle').textContent='إضافة مشرف';
+  document.getElementById('svEditId').value='';
+  document.getElementById('svName').value='';
+  document.getElementById('svId').value='';
+  document.getElementById('svPw').value='';
+  document.getElementById('svRole').value='academic_supervisor';
+  document.getElementById('svDeleteBtn').classList.add('hide');
+  document.getElementById('supervisorModal').classList.add('open');
+}
+function openEditSupervisorModal(id){
+  const t=USERS[id]; if(!t) return;
+  document.getElementById('supervisorModalTitle').textContent='تعديل المشرف';
+  document.getElementById('svEditId').value=id;
+  document.getElementById('svName').value=t.name;
+  document.getElementById('svId').value=id;
+  document.getElementById('svPw').value=t.password;
+  document.getElementById('svRole').value=t.role;
+  document.getElementById('svDeleteBtn').classList.toggle('hide',!!STATIC_USERS[id]);
+  document.getElementById('supervisorModal').classList.add('open');
+}
+function saveSupervisorModal(){
+  const editId=document.getElementById('svEditId').value;
+  const name=document.getElementById('svName').value.trim();
+  const id=document.getElementById('svId').value.trim();
+  const pw=document.getElementById('svPw').value.trim()||'super';
+  const role=document.getElementById('svRole').value;
+  if(!name||!id){ showToast('الاسم والسجل مطلوبان','error'); return; }
+  const rec={role,name,password:pw,displayName:name,emoji:supEmoji(role)};
+  if(editId && STATIC_USERS[editId]){ extraSupervisors[editId]=rec; }
+  else { if(editId&&editId!==id) delete extraSupervisors[editId]; extraSupervisors[id]=rec; }
+  rebuildUsers(); saveState(); closeModal('supervisorModal'); renderSupervisors();
+  showToast(editId?'تم تحديث المشرف':'تمت إضافة المشرف','success');
+}
+function deleteSupervisor(id){
+  const sid=id||document.getElementById('svEditId').value;
+  if(STATIC_USERS[sid]){ showToast('لا يمكن حذف مشرف أساسي','error'); return; }
+  delete extraSupervisors[sid];
+  cloudDelete('supervisors','id',sid);
+  rebuildUsers(); saveState(); closeModal('supervisorModal'); renderSupervisors();
+  showToast('تم حذف المشرف','success');
+}
 function getTrainersArray(){
   return Object.entries(USERS).filter(([k,u])=>u.role==='trainer').map(([id,u])=>({id,...u}));
 }
@@ -1877,6 +1980,12 @@ function buildStudentEvalDetails(student){
 }
 let pointsTargetId=null;
 function pointsColor(p){ return p>0?'var(--green)':p<0?'var(--red)':'var(--muted)'; }
+function renderTopPoints(list){
+  const el=document.getElementById('topPointsTable'); if(!el) return;
+  const top=list.filter(s=>(s.points||0)!==0).sort((a,b)=>(b.points||0)-(a.points||0)).slice(0,10);
+  if(!top.length){ el.innerHTML=`<tbody><tr><td><div class="empty" style="padding:20px"><div class="ic">⭐</div>لا توجد نقاط بعد</div></td></tr></tbody>`; return; }
+  el.innerHTML=`<thead><tr><th>#</th><th>الطالب</th><th>المستوى</th><th>المجموعة</th><th>النقاط</th></tr></thead><tbody>${top.map((s,i)=>`<tr><td><span class="pill">${i+1}</span></td><td><div class="cell-name"><span class="avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</span><b>${s.name}</b></div></td><td><span class="badge badge-navy">${levelLabel(s.level)}</span></td><td>${s.group}</td><td><span style="font-weight:800;font-size:16px;color:${pointsColor(s.points||0)}">${s.points||0}</span></td></tr>`).join('')}</tbody>`;
+}
 function pointsStudentList(){
   let list = (currentUser.role==='trainer') ? getTrainerStudents(currentUser) : getFilteredStudents();
   const q=(document.getElementById('pointsSearch')?.value||'').trim();
