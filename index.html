@@ -1540,15 +1540,25 @@ function calcStudentWeekAvg(tid,sid,week,skillCount){
   return getBadgeHtml(n?Math.round(sum/n):0);
 }
 function saveTrainerScores(){
-  // مزامنة متوسط المدرب مع درجة البرنامج في سجل الطالب
+  // مزامنة متوسط المدرب مع درجة البرنامج في سجل الطالب (عبر كل الأسابيع)
   let trainer = currentUser.role==='trainer'?currentUser:getTrainersArray()[0];
   const prog=PROGRAM_CONFIG[trainer.programs[0]];
-  const key=prog.key, week=currentWeek.trainer, tid=trainer.id;
+  const key=prog.key, tid=trainer.id;
   getTrainerStudents(trainer).forEach(s=>{
-    const wk=trainerScores[tid]?.[s.id]?.[week]; if(!wk) return;
-    let sum=0,n=0;
-    for(let i=0;i<prog.skills.length;i++){ if(wk[i]&&wk[i].score>0){sum+=wk[i].score;n++;} }
-    if(n) s.scores[key]=Math.round(sum/n);
+    const sdata=trainerScores[tid]&&trainerScores[tid][s.id];
+    if(!sdata) return; // لم يرصد له المدرب شيئاً -> لا نلمس درجته المخزّنة
+    let sum=0,n=0,recorded=false;
+    for(let w=1;w<=4;w++){
+      const wk=sdata[w]; if(!wk) continue;
+      for(let i=0;i<prog.skills.length;i++){
+        const cell=wk[i];
+        if(cell && cell.score!==undefined && cell.score!==null && cell.score!==''){
+          recorded=true; const sc=+cell.score; if(sc>0){sum+=sc;n++;}
+        }
+      }
+    }
+    // رُصدت درجات (ولو صفرية) -> نحدّث؛ حذف الكل يعطي 0 فيظهر «—» بدل بقاء القيمة القديمة
+    if(recorded) s.scores[key]=n?Math.round(sum/n):0;
   });
   rebuildUsers(); saveState(); unsavedEdits=false;
   showToast('تم حفظ الدرجات ومزامنتها مع تقارير الطلاب','success');
