@@ -102,8 +102,6 @@ input,select,textarea{font-family:inherit}
   box-shadow:0 8px 20px rgba(232,98,42,.32);transition:.2s;
 }
 .btn-login:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(232,98,42,.42)}
-.demo-hint{margin-top:18px;padding:12px;border-radius:12px;background:#f1f3fa;font-size:12px;color:var(--muted);text-align:center}
-.demo-hint b{color:var(--orange);cursor:pointer;text-decoration:underline}
 .login-error{color:var(--red);font-size:13px;font-weight:700;text-align:center;margin-top:12px;min-height:18px}
 
 /* ========================= هيكل التطبيق ========================= */
@@ -397,9 +395,6 @@ tbody tr:last-child td{border-bottom:none}
     <button class="btn-login" onclick="doLogin()">تسجيل الدخول</button>
     <div class="login-error" id="loginError"></div>
 
-    <div class="demo-hint">
-      حسابات تجريبية — <b onclick="fillDemo()">تعبئة تلقائية حسب الدور</b>
-    </div>
     <div data-conn style="margin-top:12px;text-align:center;font-size:12.5px;font-weight:700;color:var(--muted)">🔄 جارٍ التحميل…</div>
   </div>
 </div>
@@ -866,15 +861,6 @@ function selectLoginRole(role,el){
 function togglePwVisibility(){
   const i=document.getElementById('loginPw');
   i.type = i.type==='password'?'text':'password';
-}
-function fillDemo(){
-  let id='', pw='';
-  if(loginRole==='admin'){ id='1000000001'; pw='admin123'; }
-  else if(loginRole==='trainer'){ const t=USERS['2000000001']; id=(t&&t.phone)||'0551110001'; pw=(t&&t.password)||'trainer1'; }
-  else if(loginRole==='student'){ const s=students[0]; id=s?.idNum||''; pw=(s&&s.password)||'student1'; }
-  else if(loginRole==='parent'){ const s=students[0]; id=s?.parentPhone||''; pw=(s&&s.parentPassword)||'parent1'; }
-  document.getElementById('loginId').value=id;
-  document.getElementById('loginPw').value=pw;
 }
 function doLogin(){
   const raw=document.getElementById('loginId').value.trim();
