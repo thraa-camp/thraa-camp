@@ -80,7 +80,7 @@ input,select,textarea{font-family:inherit}
 .brand-logo{display:block;width:215px;max-width:82%;height:auto;margin:0 auto 14px}
 .brand h1{font-size:26px;color:var(--navy);font-weight:800}
 .brand p{color:var(--muted);font-size:14px;margin-top:4px}
-.role-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}
+.role-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:22px}
 .role-tab{
   padding:10px 4px;border-radius:12px;background:#f1f3fa;text-align:center;
   font-size:12.5px;font-weight:700;color:var(--muted);transition:.2s;border:2px solid transparent;
@@ -422,6 +422,8 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
 
     <div class="role-tabs" id="roleTabs">
       <div class="role-tab active" data-role="admin"   onclick="selectLoginRole('admin',this)"><span class="ic">🛡️</span>الإدارة</div>
+      <div class="role-tab" data-role="academic_supervisor" onclick="selectLoginRole('academic_supervisor',this)"><span class="ic">🔬</span>مشرف علمي</div>
+      <div class="role-tab" data-role="system_supervisor" onclick="selectLoginRole('system_supervisor',this)"><span class="ic">🧭</span>مشرف نظام</div>
       <div class="role-tab" data-role="trainer" onclick="selectLoginRole('trainer',this)"><span class="ic">👨‍🏫</span>المدرب</div>
       <div class="role-tab" data-role="student" onclick="selectLoginRole('student',this)"><span class="ic">🧑‍🎓</span>الطالب</div>
       <div class="role-tab" data-role="parent"  onclick="selectLoginRole('parent',this)"><span class="ic">👨‍👩‍👦</span>ولي الأمر</div>
@@ -462,6 +464,7 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
         <a class="nav-item" data-sec="trainer-tracking" onclick="showSection('trainer-tracking',this)"><span class="ic">✍️</span>رصد التقييم</a>
         <a class="nav-item" data-sec="trainers" onclick="showSection('trainers',this)"><span class="ic">👨‍🏫</span>المدربون</a>
         <a class="nav-item" data-sec="attendance" onclick="showSection('attendance',this)"><span class="ic">📅</span>الحضور</a>
+        <a class="nav-item" data-sec="points" onclick="showSection('points',this)"><span class="ic">⭐</span>النقاط</a>
         <a class="nav-item" data-sec="reports" onclick="showSection('reports',this)"><span class="ic">📄</span>التقارير</a>
         <a class="nav-item" data-sec="import" onclick="showSection('import',this)"><span class="ic">📥</span>استيراد Excel</a>
       </nav>
@@ -620,6 +623,17 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
           <div id="reportBody"></div>
         </section>
 
+        <!-- النقاط -->
+        <section class="section" id="sec-points">
+          <div class="card">
+            <div class="card-title">⭐ نقاط الطلاب</div>
+            <div class="toolbar">
+              <div class="grow"><input class="search" id="pointsSearch" placeholder="🔍 ابحث بالاسم أو رقم الهوية…" oninput="renderPoints()"></div>
+            </div>
+            <div class="table-wrap"><table id="pointsTable"></table></div>
+          </div>
+        </section>
+
         <!-- استيراد -->
         <section class="section" id="sec-import">
           <div class="card">
@@ -719,6 +733,28 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
   </div>
 </div>
 
+<div class="modal-overlay" id="pointsModal">
+  <div class="modal">
+    <div class="modal-head"><h3>⭐ منح / خصم نقاط</h3><button class="modal-close" onclick="closeModal('pointsModal')">×</button></div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#fafbff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <b id="ptStudentName">—</b>
+        <div>الرصيد: <b id="ptCurrent" style="font-size:18px">0</b></div>
+      </div>
+      <div class="form-grid">
+        <div class="fg"><label>عدد النقاط</label><input id="ptAmount" type="number" min="1" value="5"></div>
+        <div class="fg"><label>السبب</label><input id="ptReason" placeholder="سبب المنح أو الخصم"></div>
+      </div>
+      <div id="ptHistory"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="applyPoints(1)">➕ منح</button>
+      <button class="btn btn-danger" onclick="applyPoints(-1)">➖ خصم</button>
+      <button class="btn btn-ghost" onclick="closeModal('pointsModal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <div id="toastBox"></div>
 
 <script>
@@ -813,6 +849,8 @@ const BRAND_LOGO_URI="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org
 /* ---------- 2. المستخدمون الثابتون (admins + trainers) ---------- */
 const STATIC_USERS = {
   '1000000001':{role:'admin',name:'إدارة المعسكر',password:'admin123',displayName:'إدارة المعسكر',emoji:'🛡️'},
+  '3000000001':{role:'academic_supervisor',name:'المشرف العلمي',password:'super1',displayName:'المشرف العلمي',emoji:'🔬'},
+  '3000000002':{role:'system_supervisor',name:'مشرف النظام',password:'super2',displayName:'مشرف النظام',emoji:'🧭'},
   '2000000001':{role:'trainer',name:'أ. عبدالله المطيري',password:'trainer1',emoji:'🎓',programs:['english_asas'],level:'asas',phone:'0551110001'},
   '2000000002':{role:'trainer',name:'أ. فهد القحطاني',password:'trainer2',emoji:'🎓',programs:['english_mutaqadem'],level:'mutaqadem',phone:'0551110002'},
   '2000000003':{role:'trainer',name:'أ. سعد الزهراني',password:'trainer3',emoji:'🔬',programs:['steam'],level:'asas',phone:'0551110003'},
@@ -887,8 +925,8 @@ function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({students,extraT
 function lsLoad(){ try{ const raw=localStorage.getItem(LS); if(raw){ const d=JSON.parse(raw); students=d.students||[]; extraTrainers=d.extraTrainers||{}; extraAdmins=d.extraAdmins||{}; trainerScores=d.trainerScores||{}; } }catch(e){ console.warn('تعذّر التحميل المحلي',e); } }
 
 // تحويل صفوف Supabase ↔ كائنات التطبيق
-function toRow(s){ return {id:s.id,name:s.name,id_num:s.idNum,level:s.level,group_num:s.group,age:s.age,parent:s.parent,parent_phone:s.parentPhone,parent_id:s.parentId,scores:s.scores||{},attendance:s.attendance||{},password:s.password||null,parent_password:s.parentPassword||null}; }
-function fromRow(r){ return {id:r.id,name:r.name,idNum:r.id_num||'',level:r.level||'asas',group:r.group_num||'1',age:r.age||12,parent:r.parent||'',parentPhone:r.parent_phone||'',parentId:r.parent_id||'',scores:r.scores||{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:r.attendance||{},password:r.password||undefined,parentPassword:r.parent_password||undefined}; }
+function toRow(s){ return {id:s.id,name:s.name,id_num:s.idNum,level:s.level,group_num:s.group,age:s.age,parent:s.parent,parent_phone:s.parentPhone,parent_id:s.parentId,scores:s.scores||{},attendance:s.attendance||{},password:s.password||null,parent_password:s.parentPassword||null,points:s.points||0,points_log:s.pointsLog||[]}; }
+function fromRow(r){ return {id:r.id,name:r.name,idNum:r.id_num||'',level:r.level||'asas',group:r.group_num||'1',age:r.age||12,parent:r.parent||'',parentPhone:r.parent_phone||'',parentId:r.parent_id||'',scores:r.scores||{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:r.attendance||{},password:r.password||undefined,parentPassword:r.parent_password||undefined,points:r.points||0,pointsLog:r.points_log||[]}; }
 
 // تحميل الحالة
 async function loadState(){
@@ -971,7 +1009,7 @@ async function refreshFromCloud(){
 function renderReportsForRole(){
   if(!currentUser) return;
   const r=currentUser.role;
-  if(r==='admin'||r==='trainer'){ populateReportSelect(); loadReport(); }
+  if(r==='admin'||r==='trainer'||r==='academic_supervisor'||r==='system_supervisor'){ populateReportSelect(); loadReport(); }
   else if(r==='student'){ showStudentOwnReport(); }
   else if(r==='parent'){ showParentReport(); }
 }
@@ -1050,7 +1088,7 @@ function enterApp(){
   applyRoleRestrictions();
   renderAll();
 }
-function roleLabel(r){return {admin:'الإدارة',trainer:'مدرب',student:'طالب',parent:'ولي أمر'}[r]||r;}
+function roleLabel(r){return {admin:'الإدارة',academic_supervisor:'مشرف علمي',system_supervisor:'مشرف نظام',trainer:'مدرب',student:'طالب',parent:'ولي أمر'}[r]||r;}
 function doLogout(){
   currentUser=null;
   document.getElementById('appWrapper').style.display='none';
@@ -1079,9 +1117,18 @@ function applyRoleRestrictions(){
 
   const r=currentUser.role;
   // زر الخروج في الشريط العلوي: يظهر لكل دور عدا الإدارة (لضمان الوصول إليه دائماً)
-  document.getElementById('topLogout').style.display = (r==='admin') ? 'none' : 'inline-flex';
-  document.getElementById('topChangePw').style.display = (r==='admin') ? 'none' : 'inline-flex';
+  const fullStaff = (r==='admin'||r==='academic_supervisor'||r==='system_supervisor');
+  document.getElementById('topLogout').style.display = fullStaff ? 'none' : 'inline-flex';
+  document.getElementById('topChangePw').style.display = fullStaff ? 'none' : 'inline-flex';
   if(r==='admin'){ showSection('dashboard'); return; }
+  if(r==='academic_supervisor'){
+    ['trainer-tracking','trainers','import'].forEach(hideNav);
+    showSection('dashboard'); return;
+  }
+  if(r==='system_supervisor'){
+    ['tracking-asas','tracking-mutaqadem','trainer-tracking','trainers','import'].forEach(hideNav);
+    showSection('dashboard'); return;
+  }
 
   if(r==='trainer'){
     // المدرب: رصد التقييم + مدخل تقارير محدود
@@ -1114,6 +1161,7 @@ const SEC_TITLES={
   trainers:['المدربون','إدارة المدربين والبرامج'],
   attendance:['الحضور','سجل الحضور اليومي'],
   reports:['التقارير','التقارير الفردية للطلاب'],
+  points:['النقاط','منح وخصم نقاط الطلاب'],
   import:['استيراد Excel','استيراد بيانات الطلاب']
 };
 function toggleSidebar(){
@@ -1136,7 +1184,7 @@ function showSection(id,el){
   { const _bd=document.getElementById('sidebarBackdrop'); if(_bd) _bd.classList.remove('show'); }
 
   // إظهار/إخفاء فلتر المستوى حسب القسم
-  const showFilter=['dashboard','students'].includes(id) && currentUser.role==='admin';
+  const showFilter=['dashboard','students','points'].includes(id) && ['admin','academic_supervisor','system_supervisor'].includes(currentUser.role);
   document.getElementById('topLevelFilter').classList.toggle('hide',!showFilter);
 
   // تحميل محتوى القسم
@@ -1147,6 +1195,7 @@ function showSection(id,el){
   if(id==='trainer-tracking') renderTrainerTracking();
   if(id==='trainers') renderTrainers();
   if(id==='attendance') renderAttendanceTable();
+  if(id==='points') renderPoints();
   if(id==='reports'){
     renderReportsForRole();
     if(!unsavedEdits) refreshFromCloud().then(ok=>{
@@ -1225,6 +1274,7 @@ function filterByLevel(lvl,el){
   const active=document.querySelector('.section.active').id.replace('sec-','');
   if(active==='dashboard') renderDashboard();
   if(active==='students') renderStudents();
+  if(active==='points') renderPoints();
 }
 function getFilteredStudents(){
   let list=students.slice();
@@ -1488,7 +1538,7 @@ function saveStudentEdit(){
     showToast('تم تحديث بيانات الطالب','success');
   }else{
     const newId=students.length?Math.max(...students.map(s=>s.id))+1:1;
-    students.push({id:newId,...data,password:stPw||undefined,parentPassword:stParentPw||undefined,scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:{}});
+    students.push({id:newId,...data,password:stPw||undefined,parentPassword:stParentPw||undefined,scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:{},points:0,pointsLog:[]});
     showToast('تمت إضافة الطالب','success');
   }
   rebuildUsers(); saveState(); closeModal('studentModal'); renderStudents();
@@ -1825,6 +1875,68 @@ function buildStudentEvalDetails(student){
   if(!cards) return heading+'<div class="card"><div class="empty" style="padding:26px"><div class="ic">📝</div>لم تُرصد تقييمات تفصيلية من المدربين بعد</div></div>';
   return heading+cards;
 }
+let pointsTargetId=null;
+function pointsColor(p){ return p>0?'var(--green)':p<0?'var(--red)':'var(--muted)'; }
+function pointsStudentList(){
+  let list = (currentUser.role==='trainer') ? getTrainerStudents(currentUser) : getFilteredStudents();
+  const q=(document.getElementById('pointsSearch')?.value||'').trim();
+  if(q) list=list.filter(s=>s.name.includes(q)||s.idNum.includes(q));
+  return list;
+}
+function renderPoints(){
+  const el=document.getElementById('pointsTable'); if(!el) return;
+  const list=pointsStudentList().slice().sort((a,b)=>(b.points||0)-(a.points||0));
+  if(!list.length){ el.innerHTML=`<tbody><tr><td><div class="empty"><div class="ic">⭐</div>لا يوجد طلاب</div></td></tr></tbody>`; return; }
+  el.innerHTML=`
+    <thead><tr><th>الطالب</th><th>المستوى</th><th>المجموعة</th><th>النقاط</th><th></th></tr></thead>
+    <tbody>${list.map(s=>`
+      <tr>
+        <td><div class="cell-name"><span class="avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</span><b>${s.name}</b></div></td>
+        <td><span class="badge badge-navy">${levelLabel(s.level)}</span></td>
+        <td><span class="pill">${s.group}</span></td>
+        <td><span style="font-weight:800;font-size:16px;color:${pointsColor(s.points||0)}">${s.points||0}</span></td>
+        <td><button class="btn btn-primary btn-sm" onclick="openPointsModal(${s.id})">⭐ منح / خصم</button></td>
+      </tr>`).join('')}</tbody>`;
+}
+function openPointsModal(id){
+  pointsTargetId=id;
+  const s=students.find(x=>x.id===id); if(!s) return;
+  document.getElementById('ptStudentName').textContent=s.name;
+  document.getElementById('ptCurrent').innerHTML=`<span style="color:${pointsColor(s.points||0)}">${s.points||0}</span>`;
+  document.getElementById('ptAmount').value='5';
+  document.getElementById('ptReason').value='';
+  renderPointsHistory(s);
+  document.getElementById('pointsModal').classList.add('open');
+}
+function renderPointsHistory(s){
+  const log=(s.pointsLog||[]).slice().reverse().slice(0,10);
+  const el=document.getElementById('ptHistory');
+  if(!log.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">لا توجد حركات سابقة</div>'; return; }
+  el.innerHTML='<div style="font-weight:700;margin:10px 0 6px">آخر الحركات:</div>'+log.map(e=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="font-weight:800;color:${e.delta>0?'var(--green)':'var(--red)'}">${e.delta>0?'+':''}${e.delta}</span><span style="flex:1">${(e.reason||'—').toString().replace(/</g,'&lt;')}</span><span style="color:var(--muted);font-size:11.5px">${roleLabel(e.role)} · ${e.date||''}</span></div>`).join('');
+}
+function applyPoints(sign){
+  const s=students.find(x=>x.id===pointsTargetId); if(!s) return;
+  const amt=Math.abs(Math.floor(+document.getElementById('ptAmount').value))||0;
+  if(amt<=0){ showToast('أدخل عدد نقاط صحيح','error'); return; }
+  const reason=document.getElementById('ptReason').value.trim();
+  const delta=sign*amt;
+  s.points=(s.points||0)+delta;
+  s.pointsLog=s.pointsLog||[];
+  s.pointsLog.push({delta, reason, by:currentUser.displayName||currentUser.name, role:currentUser.role, date:new Date().toISOString().slice(0,16).replace('T',' ')});
+  saveState();
+  renderPointsHistory(s);
+  document.getElementById('ptCurrent').innerHTML=`<span style="color:${pointsColor(s.points)}">${s.points}</span>`;
+  document.getElementById('ptReason').value='';
+  renderPoints();
+  showToast(sign>0?`تم منح ${amt} نقطة`:`تم خصم ${amt} نقطة`,'success');
+}
+function buildPointsCard(student){
+  const pts=student.points||0;
+  const log=(student.pointsLog||[]).slice().reverse();
+  if(!log.length && !pts) return '';
+  const table = log.length ? `<div class="table-wrap"><table><thead><tr><th>النقاط</th><th>السبب</th><th>بواسطة</th><th>التاريخ</th></tr></thead><tbody>${log.map(e=>`<tr><td style="text-align:center;font-weight:800;color:${e.delta>0?'var(--green)':'var(--red)'}">${e.delta>0?'+':''}${e.delta}</td><td>${(e.reason||'—').toString().replace(/</g,'&lt;')}</td><td style="color:var(--muted);font-size:12.5px">${roleLabel(e.role)}</td><td style="color:var(--muted);font-size:12.5px">${e.date||''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty" style="padding:18px">لا توجد حركات نقاط</div>';
+  return `<div class="card"><div class="card-title">⭐ سجل النقاط <span style="color:${pointsColor(pts)};font-weight:800;margin-inline-start:8px">(${pts})</span></div>${table}</div>`;
+}
 function renderReport(id){
   const s=students.find(x=>x.id===id); if(!s) return;
   const keys=relevantKeys(s.level);
@@ -1858,7 +1970,9 @@ function renderReport(id){
       <div class="rs-box"><div class="n" style="color:var(--green)">${present}</div><div class="l">أيام الحضور</div></div>
       <div class="rs-box"><div class="n" style="color:var(--red)">${absent}</div><div class="l">أيام الغياب</div></div>
       <div class="rs-box"><div class="n" style="color:var(--orange)">#${rank}</div><div class="l">الترتيب على المستوى</div></div>
+      <div class="rs-box"><div class="n" style="color:${pointsColor(s.points||0)}">${s.points||0}</div><div class="l">النقاط</div></div>
     </div>
+    ${buildPointsCard(s)}
     ${buildCounterSummary(s)}
     <div class="card">
       <div class="card-title">📊 الأداء في البرامج</div>
@@ -1996,7 +2110,7 @@ function confirmImport(){
       id:nextId++, name:r.name, idNum:r.idNum||String(1020000000+nextId), level:r.level,
       group:r.group, age:r.age, parent:r.parent, parentPhone:r.parentPhone,
       parentId:r.parentId||String(5000000000+nextId),
-      scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0}, attendance:{}
+      scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0}, attendance:{}, points:0, pointsLog:[]
     });
   });
   rebuildUsers(); saveState();
