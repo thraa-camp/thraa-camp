@@ -1439,7 +1439,7 @@ function loadTracking(level){
       </tr>`).join('')}</tbody>`;
 }
 function onTrackInput(input,sid){
-  let v=+input.value; if(v>100)v=100; if(v<0)v=0;
+  let v=+input.value; if(isNaN(v)) v=0; if(v>100){v=100;input.value=100;} if(v<0){v=0;input.value=0;}
   const s=students.find(x=>x.id===sid);
   s.scores[input.dataset.key]=v;
   document.getElementById('trkavg-'+sid).innerHTML=getBadgeHtml(getAvgScore(s));
@@ -1481,7 +1481,7 @@ function renderTrainerTracking(){
     }).join('')}</tbody>`;
 }
 function onScoreInput(input,tid,sid,week){
-  let v=+input.value; if(v>100)v=100; if(v<0)v=0;
+  let v=+input.value; if(isNaN(v)) v=0; if(v>100){v=100;input.value=100;} if(v<0){v=0;input.value=0;}
   trainerScores[tid][sid]=trainerScores[tid][sid]||{};
   trainerScores[tid][sid][week]=trainerScores[tid][sid][week]||{};
   trainerScores[tid][sid][week][input.dataset.skill]={score:v};
