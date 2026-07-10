@@ -605,13 +605,14 @@ tbody tr:last-child td{border-bottom:none}
       <input type="hidden" id="stEditId">
       <div class="form-grid">
         <div class="fg full"><label>اسم الطالب</label><input id="stName" placeholder="الاسم الثلاثي"></div>
-        <div class="fg"><label>رقم الهوية (اسم المستخدم)</label><input id="stIdNum" inputmode="numeric" placeholder="10 أرقام"></div>
-        <div class="fg"><label>العمر</label><input id="stAge" type="number" min="6" max="18"></div>
+        <div class="fg"><label>رقم الهوية (دخول الطالب)</label><input id="stIdNum" inputmode="numeric" placeholder="10 أرقام"></div>
         <div class="fg"><label>المستوى</label><select id="stLevel"><option value="asas">الأساس</option><option value="mutaqadem">المتقدم</option></select></div>
         <div class="fg"><label>المجموعة</label><select id="stGroup"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
         <div class="fg"><label>اسم ولي الأمر</label><input id="stParent"></div>
-        <div class="fg"><label>جوال ولي الأمر</label><input id="stParentPhone" inputmode="numeric" placeholder="05xxxxxxxx"></div>
-        <div class="fg full"><label>هوية ولي الأمر (اسم مستخدمه)</label><input id="stParentId" inputmode="numeric" placeholder="10 أرقام"></div>
+        <div class="fg"><label>جوال ولي الأمر (دخول الولي)</label><input id="stParentPhone" inputmode="numeric" placeholder="05xxxxxxxx"></div>
+        <div class="fg full"><label>هوية ولي الأمر</label><input id="stParentId" inputmode="numeric" placeholder="10 أرقام"></div>
+        <div class="fg"><label>🔑 كلمة مرور الطالب</label><input id="stPassword" placeholder="الافتراضية: student1"></div>
+        <div class="fg"><label>🔑 كلمة مرور ولي الأمر</label><input id="stParentPassword" placeholder="الافتراضية: parent1"></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1223,14 +1224,13 @@ function renderStudentsTable(){
   const t=document.getElementById('studentsTable');
   if(!list.length){ t.innerHTML=`<tbody><tr><td><div class="empty"><div class="ic">🔍</div>لا يوجد طلاب مطابقون</div></td></tr></tbody>`; return;}
   t.innerHTML=`
-    <thead><tr><th>الطالب</th><th>الهوية</th><th>المستوى</th><th>المجموعة</th><th>العمر</th><th>ولي الأمر</th><th>المتوسط</th><th></th></tr></thead>
+    <thead><tr><th>الطالب</th><th>الهوية</th><th>المستوى</th><th>المجموعة</th><th>ولي الأمر</th><th>المتوسط</th><th></th></tr></thead>
     <tbody>${list.map(s=>`
       <tr>
         <td><div class="cell-name"><span class="avatar" style="background:${getAvatarColor(s.name)}">${getInitials(s.name)}</span><div><b>${s.name}</b></div></div></td>
         <td>${s.idNum}</td>
         <td><span class="badge badge-navy">${levelLabel(s.level)}</span></td>
         <td><span class="pill">${s.group}</span></td>
-        <td>${s.age}</td>
         <td>${s.parent}<br><small style="color:var(--muted)">${s.parentPhone}</small></td>
         <td>${getBadgeHtml(getAvgScore(s))}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="openEditModal(${s.id})">✏️ تعديل</button></td>
@@ -1250,7 +1250,6 @@ function renderStudentsGrid(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <span class="badge badge-navy">${levelLabel(s.level)}</span>
         <span class="pill">مجموعة ${s.group}</span>
-        <span class="pill">${s.age} سنة</span>
       </div>
       <div class="avg"><div class="n" style="color:${getScoreColor(avg)}">${avg}%</div><div class="l">المتوسط العام</div></div>
     </div>`;
@@ -1261,7 +1260,7 @@ function renderStudentsGrid(){
 function openModal_addStudent(){
   document.getElementById('studentModalTitle').textContent='إضافة طالب';
   document.getElementById('stEditId').value='';
-  ['stName','stIdNum','stAge','stParent','stParentPhone','stParentId'].forEach(id=>document.getElementById(id).value='');
+  ['stName','stIdNum','stParent','stParentPhone','stParentId','stPassword','stParentPassword'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('stLevel').value='asas';
   document.getElementById('stGroup').value='1';
   document.getElementById('stDeleteBtn').classList.add('hide');
@@ -1273,12 +1272,13 @@ function openEditModal(id){
   document.getElementById('stEditId').value=s.id;
   document.getElementById('stName').value=s.name;
   document.getElementById('stIdNum').value=s.idNum;
-  document.getElementById('stAge').value=s.age;
   document.getElementById('stLevel').value=s.level;
   document.getElementById('stGroup').value=s.group;
   document.getElementById('stParent').value=s.parent;
   document.getElementById('stParentPhone').value=s.parentPhone;
   document.getElementById('stParentId').value=s.parentId;
+  document.getElementById('stPassword').value=s.password||'student1';
+  document.getElementById('stParentPassword').value=s.parentPassword||'parent1';
   document.getElementById('stDeleteBtn').classList.remove('hide');
   document.getElementById('studentModal').classList.add('open');
 }
@@ -1289,20 +1289,22 @@ function saveStudentEdit(){
   if(!name || !idNum){ showToast('الاسم ورقم الهوية مطلوبان','error'); return; }
   const data={
     name, idNum,
-    age:+document.getElementById('stAge').value||12,
     level:document.getElementById('stLevel').value,
     group:document.getElementById('stGroup').value,
     parent:document.getElementById('stParent').value.trim(),
     parentPhone:document.getElementById('stParentPhone').value.trim(),
     parentId:document.getElementById('stParentId').value.trim()
   };
+  const stPw=document.getElementById('stPassword').value.trim();
+  const stParentPw=document.getElementById('stParentPassword').value.trim();
   if(idv){
     const s=students.find(x=>x.id===+idv);
     Object.assign(s,data);
+    s.password=stPw||undefined; s.parentPassword=stParentPw||undefined;
     showToast('تم تحديث بيانات الطالب','success');
   }else{
     const newId=students.length?Math.max(...students.map(s=>s.id))+1:1;
-    students.push({id:newId,...data,scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:{}});
+    students.push({id:newId,...data,password:stPw||undefined,parentPassword:stParentPw||undefined,scores:{english:0,steam:0,arduino:0,quran:0,leadership:0,sports:0,self:0},attendance:{}});
     showToast('تمت إضافة الطالب','success');
   }
   rebuildUsers(); saveState(); closeModal('studentModal'); renderStudents();
@@ -1573,6 +1575,43 @@ function showParentReport(){
   const s=students.find(x=>x.id===currentUser.childId);
   if(s) renderReport(s.id);
 }
+function buildStudentEvalDetails(student){
+  const trainers=getTrainersArray();
+  let cards='';
+  trainers.forEach(tr=>{
+    if(!getTrainerStudents(tr).some(x=>x.id===student.id)) return;
+    const sdata=trainerScores[tr.id]&&trainerScores[tr.id][student.id];
+    if(!sdata) return;
+    const prog=PROGRAM_CONFIG[tr.programs[0]]; if(!prog) return;
+    const skills=prog.skills;
+    const weeks=[1,2,3,4].filter(w=>{
+      const wk=sdata[w]; if(!wk) return false;
+      const hasScore=skills.some((_,i)=>wk[i]&&(+wk[i].score)>0);
+      return hasScore || (wk.note&&String(wk.note).trim());
+    });
+    if(!weeks.length) return;
+    const rows=weeks.map(w=>{
+      const wk=sdata[w]; let sum=0,n=0;
+      const cells=skills.map((_,i)=>{
+        const v=(wk[i]&&+wk[i].score)||0; if(v>0){sum+=v;n++;}
+        return `<td style="text-align:center;font-weight:800;color:${v?getScoreColor(v):'var(--muted)'}">${v||'—'}</td>`;
+      }).join('');
+      const avg=n?Math.round(sum/n):0;
+      const note=(wk.note||'').toString().replace(/</g,'&lt;');
+      return `<tr><td><b>الأسبوع ${w}</b></td>${cells}<td style="text-align:center">${getBadgeHtml(avg)}</td><td style="color:var(--muted);font-size:12.5px">${note||'—'}</td></tr>`;
+    }).join('');
+    cards+=`<div class="card">
+      <div class="card-title" style="color:${prog.color}">✍️ ${prog.label} <span style="color:var(--muted);font-weight:600;font-size:13.5px">— ${tr.name}</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>الفترة</th>${skills.map(sk=>`<th>${sk}</th>`).join('')}<th>المتوسط</th><th>ملاحظة المدرب</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  });
+  const heading='<div class="card-title" style="margin:26px 4px 12px;font-size:18px">📋 التقييم التفصيلي من المدربين</div>';
+  if(!cards) return heading+'<div class="card"><div class="empty" style="padding:26px"><div class="ic">📝</div>لم تُرصد تقييمات تفصيلية من المدربين بعد</div></div>';
+  return heading+cards;
+}
 function renderReport(id){
   const s=students.find(x=>x.id===id); if(!s) return;
   const keys=relevantKeys(s.level);
@@ -1598,7 +1637,6 @@ function renderReport(id){
         <div class="rh-badges">
           <span class="badge badge-orange">${levelLabel(s.level)}</span>
           <span class="badge badge-navy">المجموعة ${s.group}</span>
-          <span class="badge badge-navy">${s.age} سنة</span>
         </div>
       </div>
     </div>
@@ -1616,6 +1654,7 @@ function renderReport(id){
           <div class="track"><div class="fill" style="width:${sk.v}%;background:${sk.color}"></div></div>
         </div>`).join('')}</div>
     </div>
+    ${buildStudentEvalDetails(s)}
     <div class="card">
       <div class="card-title">📝 التقدير العام</div>
       <p style="font-size:15px">${overallComment(avg)}</p>
@@ -1729,8 +1768,8 @@ function showImportPreview(rows){
   importRows=rows;
   document.getElementById('importCount').textContent=rows.length;
   document.getElementById('importPreviewTable').innerHTML=`
-    <thead><tr><th>الاسم</th><th>الهوية</th><th>المستوى</th><th>المجموعة</th><th>العمر</th><th>ولي الأمر</th></tr></thead>
-    <tbody>${rows.map(r=>`<tr><td>${r.name}</td><td>${r.idNum}</td><td>${levelLabel(r.level)}</td><td>${r.group}</td><td>${r.age}</td><td>${r.parent}</td></tr>`).join('')}</tbody>`;
+    <thead><tr><th>الاسم</th><th>الهوية</th><th>المستوى</th><th>المجموعة</th><th>ولي الأمر</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r.name}</td><td>${r.idNum}</td><td>${levelLabel(r.level)}</td><td>${r.group}</td><td>${r.parent}</td></tr>`).join('')}</tbody>`;
   document.getElementById('importPreviewCard').classList.remove('hide');
 }
 function confirmImport(){
