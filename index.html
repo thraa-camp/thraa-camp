@@ -628,7 +628,7 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
           <div class="card no-print" id="reportPicker">
             <div class="card-title">📄 التقارير الفردية</div>
             <div class="toolbar">
-              <div class="grow"><select class="select" id="reportStudentSelect" style="width:100%" onchange="loadReport()"><option value="">— اختر طالباً —</option></select></div>
+              <div class="grow" id="reportSelectWrap"><select class="select" id="reportStudentSelect" style="width:100%" onchange="loadReport()"><option value="">— اختر طالباً —</option></select></div>
               <button class="btn btn-ghost btn-sm" onclick="manualRefreshReports()">🔄 تحديث</button>
               <button class="btn btn-ghost btn-sm" onclick="printReport()">🖨️ طباعة</button>
               <button class="btn btn-nav btn-sm" onclick="exportReport()">⬇️ تصدير</button>
@@ -1048,9 +1048,12 @@ async function refreshFromCloud(){
 function renderReportsForRole(){
   if(!currentUser) return;
   const r=currentUser.role;
-  if(r==='admin'||r==='trainer'||r==='academic_supervisor'||r==='system_supervisor'){ populateReportSelect(); loadReport(); }
-  else if(r==='student'){ showStudentOwnReport(); }
+  const wrap=document.getElementById('reportSelectWrap');
+  const isViewer=(r==='student'||r==='parent');
+  if(wrap) wrap.style.display = isViewer ? 'none' : '';
+  if(r==='student'){ showStudentOwnReport(); }
   else if(r==='parent'){ showParentReport(); }
+  else { populateReportSelect(); loadReport(); }
 }
 function manualRefreshReports(){
   if(unsavedEdits){ showToast('لديك درجات غير محفوظة — احفظها أولاً','error'); return; }
@@ -1917,9 +1920,13 @@ function populateReportSelect(){
   const sel=document.getElementById('reportStudentSelect');
   if(!sel) return;
   const prev=sel.value;
-  // الإدارة ترى كل الطلاب؛ المدرب يرى طلاب نطاقه (مستواه) فقط
+  // الإدارة/المشرف ترى كل الطلاب؛ المدرب يرى طلاب نطاقه؛ الطالب/الولي يرى نفسه فقط
   let list=students;
-  if(currentUser && currentUser.role==='trainer') list=getTrainerStudents(currentUser);
+  if(currentUser){
+    if(currentUser.role==='trainer') list=getTrainerStudents(currentUser);
+    else if(currentUser.role==='student') list=students.filter(s=>s.id===currentUser.studentId);
+    else if(currentUser.role==='parent') list=students.filter(s=>s.id===currentUser.childId);
+  }
   sel.innerHTML='<option value="">— اختر طالباً —</option>'+
     list.map(s=>`<option value="${s.id}">${s.name} — ${levelLabel(s.level)}</option>`).join('');
   if(prev && list.some(s=>String(s.id)===prev)) sel.value=prev;
