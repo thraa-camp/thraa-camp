@@ -134,6 +134,7 @@ input,select,textarea{font-family:inherit}
 .btn-logout:hover{background:var(--red)}
 .btn-side-action{width:100%;padding:11px;border-radius:11px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;margin-bottom:8px}
 .btn-side-action:hover{background:var(--orange)}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(15,24,48,.5);z-index:35}
 
 .main{flex:1;margin-right:260px;min-width:0;display:flex;flex-direction:column}
 .topbar{
@@ -181,7 +182,7 @@ input,select,textarea{font-family:inherit}
 .seg button.active{background:#fff;color:var(--orange);box-shadow:0 2px 8px rgba(0,0,0,.08)}
 
 /* الجداول */
-.table-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--line)}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;border-radius:var(--r);border:1px solid var(--line)}
 table{width:100%;border-collapse:collapse;font-size:14px;background:#fff}
 thead th{background:var(--navy);color:#fff;padding:13px 14px;text-align:right;font-weight:700;white-space:nowrap;font-size:13.5px}
 tbody td{padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -294,11 +295,54 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
 
 /* Responsive */
 @media(max-width:900px){
-  .sidebar{transform:translateX(100%)}
+  .sidebar{transform:translateX(100%);box-shadow:-8px 0 30px rgba(0,0,0,.25)}
   .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop.show{display:block}
   .main{margin-right:0}
   .menu-toggle{display:block}
   .form-grid{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .content{padding:14px}
+  .topbar{padding:12px 14px;gap:8px}
+  .topbar h1{font-size:17px}
+  .topbar .sub{font-size:11px}
+  .card{padding:16px;margin-bottom:16px}
+  .card-title{font-size:15.5px}
+  .stats-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+  .stat{padding:15px}
+  .stat h3{font-size:24px}
+  .stat .ic{width:40px;height:40px;font-size:20px;margin-bottom:8px}
+  .charts-grid{grid-template-columns:1fr;gap:14px}
+  .chart-box{height:240px}
+  .toolbar{gap:8px}
+  .btn{padding:9px 14px;font-size:13px}
+  .btn-primary,.btn-nav,.btn-ghost{white-space:nowrap}
+  .seg button{padding:7px 11px;font-size:12.5px}
+  .report-summary{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+  .rs-box{padding:14px}
+  .rs-box .n{font-size:22px}
+  .report-head{padding:18px;gap:12px}
+  .report-head .avatar{width:56px;height:56px;font-size:22px}
+  .report-head h2{font-size:19px}
+  .report-letterhead{padding:12px 14px;gap:12px}
+  .report-letterhead .rl-logo{width:110px}
+  .login-card{padding:26px 20px}
+  .brand-logo{width:185px}
+  .role-tab{font-size:11px;padding:9px 3px}
+  .role-tab .ic{font-size:18px;margin-bottom:2px}
+  .grid-cards{grid-template-columns:1fr}
+  .trainer-grid{grid-template-columns:1fr}
+  .modal-overlay{padding:14px 10px}
+  .modal-body{padding:16px}
+  .modal-foot{padding:14px 16px;flex-wrap:wrap}
+  .field input,.fg input,.fg select,.search,.select{font-size:16px}
+}
+@media(max-width:400px){
+  .role-tabs{gap:5px}
+  .topbar h1{font-size:15.5px}
+  .btn{padding:8px 12px;font-size:12.5px}
+  .brand h1{font-size:22px}
 }
 
 /* الطباعة */
@@ -431,11 +475,12 @@ tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#fafbff;w
         <button class="btn-logout" onclick="doLogout()"><span>🚪</span> تسجيل الخروج</button>
       </div>
     </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
     <!-- المحتوى -->
     <div class="main">
       <div class="topbar">
-        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
         <div><h1 id="pageTitle">لوحة المعلومات</h1><div class="sub" id="pageSub">نظرة عامة على المعسكر</div></div>
         <div style="display:flex;align-items:center;gap:12px">
           <div class="seg no-print" id="topLevelFilter">
@@ -1071,6 +1116,12 @@ const SEC_TITLES={
   reports:['التقارير','التقارير الفردية للطلاب'],
   import:['استيراد Excel','استيراد بيانات الطلاب']
 };
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const open=sb.classList.toggle('open');
+  const bd=document.getElementById('sidebarBackdrop');
+  if(bd) bd.classList.toggle('show',open);
+}
 function showSection(id,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   const sec=document.getElementById('sec-'+id);
@@ -1082,6 +1133,7 @@ function showSection(id,el){
   document.getElementById('pageTitle').textContent=t[0];
   document.getElementById('pageSub').textContent=t[1];
   document.getElementById('sidebar').classList.remove('open');
+  { const _bd=document.getElementById('sidebarBackdrop'); if(_bd) _bd.classList.remove('show'); }
 
   // إظهار/إخفاء فلتر المستوى حسب القسم
   const showFilter=['dashboard','students'].includes(id) && currentUser.role==='admin';
